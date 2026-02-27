@@ -212,10 +212,12 @@ class _GamePageState extends State<GamePage> {
       });
       _generateNewString();
     } else if (widget.gameType != 'sprint') {
-      _generateNewString();
+      if (_consecutiveWrong >= 2) {
+        _endGame();
+      } else {
+        _generateNewString();
+      }
     } else if (widget.gameType == 'sprint' && _totalTimer <= 0) {
-      _endGame();
-    } else if (_consecutiveWrong >= 2 && widget.gameType != 'sprint') {
       _endGame();
     }
   }
