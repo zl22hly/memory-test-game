@@ -31,15 +31,46 @@ class StorageService {
   Future<void> saveScore(Score newScore) async {
     List<Score> scores = getScores();
     
-    scores.removeWhere((s) => 
-      s.gameType == newScore.gameType && 
-      s.contentType == newScore.contentType && 
-      s.length == newScore.length
-    );
+    // 找到同类型、同内容、同长度的旧成绩
+    Score? oldScore;
+    try {
+      oldScore = scores.firstWhere(
+        (s) => s.gameType == newScore.gameType && 
+               s.contentType == newScore.contentType && 
+               s.length == newScore.length,
+      );
+    } catch (e) {
+      // 没有找到旧成绩
+      oldScore = null;
+    }
     
-    scores.add(newScore);
+    // 判断是否需要更新成绩
+    bool shouldUpdate = false;
     
-    await _prefs.setString(_scoresKey, json.encode(scores.map((s) => s.toJson()).toList()));
+    if (oldScore == null) {
+      // 没有旧成绩，直接添加
+      shouldUpdate = true;
+    } else {
+      // 根据游戏类型的不同规则判断
+      if (newScore.gameType == 'sprint') {
+        // 极速记忆冲刺：当前成绩个数大于记录的成绩个数时更新
+        shouldUpdate = newScore.value > oldScore.value;
+      } else {
+        // 进阶记忆挑战和速记耐力挑战：当前位数大于记录的位数时更新
+        shouldUpdate = newScore.value > oldScore.value;
+      }
+    }
+    
+    if (shouldUpdate) {
+      // 移除旧成绩（如果存在）
+      if (oldScore != null) {
+        scores.remove(oldScore);
+      }
+      // 添加新成绩
+      scores.add(newScore);
+      // 保存到存储
+      await _prefs.setString(_scoresKey, json.encode(scores.map((s) => s.toJson()).toList()));
+    }
   }
 
   Future<void> deleteScore(Score score) async {

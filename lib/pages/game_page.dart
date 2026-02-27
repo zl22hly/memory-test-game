@@ -137,6 +137,9 @@ class _GamePageState extends State<GamePage> {
     String userAnswer = _controller.text;
     bool correct = userAnswer == _currentString;
 
+    // 显示答案结果
+    _showAnswerResult(_currentString, userAnswer);
+
     if (correct) {
       _correctCount++;
       _consecutiveCorrect++;
@@ -147,40 +150,121 @@ class _GamePageState extends State<GamePage> {
       } else {
         _scoreValue = _currentLength;
       }
-
-      if (_consecutiveCorrect >= 2 && widget.gameType != 'sprint') {
-        _currentLength++;
-        _consecutiveCorrect = 0;
-      }
-
-      if (widget.gameType == 'sprint' && _totalTimer > 0) {
-        setState(() {
-          _isPaused = false;
-        });
-        _generateNewString();
-      } else if (widget.gameType != 'sprint') {
-        _generateNewString();
-      }
     } else {
       _wrongCount++;
       _consecutiveWrong++;
       _consecutiveCorrect = 0;
+    }
+  }
 
-      if (_consecutiveWrong >= 2 && widget.gameType != 'sprint') {
-        _endGame();
-      } else if (widget.gameType == 'sprint' && _totalTimer > 0) {
-        setState(() {
-          _isPaused = false;
-        });
-        _generateNewString();
-      } else if (widget.gameType != 'sprint' && _totalTimer > 0) {
-        _generateNewString();
+  void _showAnswerResult(String correctAnswer, String userAnswer) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          contentPadding: const EdgeInsets.all(20),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '正确答案：',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                correctAnswer,
+                style: const TextStyle(fontSize: 18, color: Colors.black),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '你的答案：',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              _buildColoredText(correctAnswer, userAnswer),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _continueGame();
+              },
+              child: const Text('继续'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _continueGame() {
+    if (_consecutiveCorrect >= 2 && widget.gameType != 'sprint') {
+      _currentLength++;
+      _consecutiveCorrect = 0;
+    }
+
+    if (widget.gameType == 'sprint' && _totalTimer > 0) {
+      setState(() {
+        _isPaused = false;
+      });
+      _generateNewString();
+    } else if (widget.gameType != 'sprint') {
+      _generateNewString();
+    } else if (widget.gameType == 'sprint' && _totalTimer <= 0) {
+      _endGame();
+    } else if (_consecutiveWrong >= 2 && widget.gameType != 'sprint') {
+      _endGame();
+    }
+  }
+
+  Widget _buildColoredText(String correct, String user) {
+    List<InlineSpan> spans = [];
+
+    int maxLength = correct.length > user.length ? correct.length : user.length;
+
+    for (int i = 0; i < maxLength; i++) {
+      if (i < correct.length && i < user.length) {
+        if (user[i] == correct[i]) {
+          spans.add(
+            TextSpan(
+              text: user[i],
+              style: const TextStyle(fontSize: 18, color: Colors.green),
+            ),
+          );
+        } else {
+          spans.add(
+            TextSpan(
+              text: user[i],
+              style: const TextStyle(fontSize: 18, color: Colors.red),
+            ),
+          );
+        }
+      } else if (i < user.length) {
+        spans.add(
+          TextSpan(
+            text: user[i],
+            style: const TextStyle(fontSize: 18, color: Colors.red),
+          ),
+        );
+      } else if (i < correct.length) {
+        spans.add(
+          TextSpan(
+            text: '_',
+            style: const TextStyle(fontSize: 18, color: Colors.red),
+          ),
+        );
       }
     }
 
-    if (widget.gameType == 'sprint' && _totalTimer <= 0) {
-      _endGame();
-    }
+    return RichText(
+      textAlign: TextAlign.left,
+      text: TextSpan(
+        children: spans,
+      ),
+    );
   }
 
   void _endGame() async {
